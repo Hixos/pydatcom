@@ -53,7 +53,7 @@ class DatcomConfig:
 
         for i, d in enumerate(deflect):
             if d["mode"] == "Symmetric":
-                self.states["FIN" + str(i + 1) + ".DELTA"] = d["deltas"]
+                self.states["fin" + str(i + 1) + ".delta"] = d["deltas"]
                 self.fin_states.append((i + 1, 1))
                 self.deflect_cases.append(
                     [tuple([x] * d["numfins"]) for x in d["deltas"]]
@@ -70,7 +70,17 @@ class DatcomConfig:
                     )
                 )
             else:
-                self.deflect_cases.append([()])
+                if len(d["deltas"]) == d["numfins"]:
+                    self.deflect_cases.append(
+                        [tuple(d["deltas"][0:d["numfins"]])]
+                    )
+                else:
+                    if len(d["deltas"]) > 0:
+                        print(
+                            "Number of fin deflection must equal number of "
+                            "fins in the 'Fixed' case. Using 0 deg for all fins."
+                        )
+                    self.deflect_cases.append([()])
 
     def readDeflections(self, config, finset):
         deflect = {}
