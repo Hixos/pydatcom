@@ -17,13 +17,14 @@ class DatcomCase:
     }
 
     fin_hinge_re = re.compile(r"FIN SET (?P<finnum>\d+) PANEL HINGE MOMENTS")
+    number_line_re = re.compile(r"(?P<num>-?\d+(?:.\d+)?(?:[eE][-+]?\d+)?)")
 
     def __init__(self):
         self.alphas = []
 
         # {MACH: {"CL": [...], "FIN1.PANL1": [...], ...}, ...}
         self.data = OrderedDict()
-        
+
         self.altitude = None
         self.beta = None
         self.deflect = None
@@ -139,7 +140,9 @@ class DatcomCase:
                     continue
 
                 parse_started = True
-                vals = [float(x) for x in line.split(" ") if x]
+                vals = [
+                    float(x) for x in self.number_line_re.findall(line) if x
+                ]
 
                 for i, v in enumerate(vals):
                     colname = cols[i]
