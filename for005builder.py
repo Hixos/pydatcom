@@ -18,13 +18,16 @@ def listToCard(name: str, vals: list):
         vs = formatNumber(v) + ","
         if len(row) + len(vs) > 79:
             card += row + "\n"
-            row = "  " + name + "(" + str(i + 2) + ") = "
+            row = "  " + name + "(" + str(i + 1) + ") = "
         row += vs
     card += row
     return card
 
 
 def printNameList(f, name, data):
+    if len(data) == 0:
+        return
+
     namelist = " $" + name
     for k, v in data.items():
         namelist += "\n"
@@ -91,4 +94,4 @@ def build005(file, config, cases, rocket_config):
                 f.write(rocket_config)
 
             printDeflct(f, case_dict)
-            printOptions(f, i)
+            printOptions(f, ic)
