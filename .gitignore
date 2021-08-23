@@ -140,3 +140,5 @@ cython_debug/
 
 .vscode/
 datcom/
+datcom_outputs/
+output/
