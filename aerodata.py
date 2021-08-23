@@ -32,6 +32,10 @@ class Aerodata:
         state_size = tuple([len(v) for v in self.state_vecs])
         self.aerodata[name] = np.zeros(state_size)
 
+    def getFlatSize(self):
+        aerodata_size = tuple([len(x) for x in self.state_vecs])
+        return np.prod(aerodata_size)
+
     def getCaseState(self, case: DatcomCase):
         """Returns a tuple of constant state variables within a case:
         (beta, altitude, [delta1, delta2...])
@@ -43,10 +47,27 @@ class Aerodata:
 
         # Which fin deflections are used as a state?
         for set, fin in self.state_fin_info:
-            state += (case.deflect[set-1][fin-1],)
+            state += (case.deflect[set - 1][fin - 1],)
 
         return state
 
     def getStateIndex(self, state):
         index = [self.state_vecs[i].index(s) for i, s in enumerate(state)]
         return tuple(index)
+
+    def getStateFromFlatIndex(self, flat_index: int):
+        index = self.getIndex(flat_index)
+        state = [s[index[i]] for i, s in enumerate(self.state_vecs)]
+        return state
+
+    def getDataFromFlatIndex(self, index: int):
+        aerodata_size = tuple([len(x) for x in self.state_vecs])
+        i = np.unravel_index(index, aerodata_size)
+        out = {}
+        for k, v in self.aerodata.items():
+            out[k] = v[i]
+        return out
+
+    def getIndex(self, flat_index: int):
+        aerodata_size = tuple([len(x) for x in self.state_vecs])
+        return np.unravel_index(flat_index, aerodata_size)
