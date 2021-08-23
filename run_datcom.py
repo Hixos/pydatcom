@@ -4,8 +4,10 @@ from for006parser import readDatcomOutput
 import itertools
 import subprocess
 import aerodata
-from os import path
+from os import path, mkdir
+import shutil
 import sys
+import output
 
 
 def splitCases(cases, size):
@@ -17,12 +19,14 @@ def splitCases(cases, size):
     return split
 
 
+output_folder = "output"
 datcom_folder = "datcom"
 config_path = "config.cfg"
 for005_path = path.join(datcom_folder, "for005.dat")
 rocket_def_file = "for005rocket.dat"
 for006_path = path.join(datcom_folder, "for006.dat")
 datcom_cmd = "./datcom"
+store_datcom_raw_output = False
 
 enable_stdout = False
 
@@ -62,7 +66,24 @@ aero_data = aerodata.Aerodata(state_vectors, config.fin_states)
 # of them in a singe run)
 case_list_split = splitCases(case_list, config.max_cases_per_file)
 
-for cases in case_list_split:
+case_counter = 0
+
+if path.isdir("datcom_outputs"):
+    shutil.rmtree("datcom_outputs")
+mkdir("datcom_outputs")
+
+if path.isdir(output_folder):
+    shutil.rmtree(output_folder)
+
+mkdir(output_folder)
+
+for i, cases in enumerate(case_list_split):
+    case_counter += len(cases)
+    print(
+        "Calculating coefficients... ({}/{})".format(
+            case_counter, len(case_list)
+        )
+    )
     build005(for005_path, config, cases, rocket_def)
 
     # Run datcom
@@ -79,4 +100,21 @@ for cases in case_list_split:
     case_data = readDatcomOutput(for006)
     aero_data.addFromDatcomCases(case_data)
 
-print("end")
+    if store_datcom_raw_output:
+        shutil.move(
+            for006_path,
+            path.join("datcom_outputs", "for006.dat.{:03d}".format(i + 1)),
+        )
+
+print("Saving results...")
+
+print("CSV...")
+output.saveCSV(path.join(output_folder, "for006"), config, aero_data)
+
+print("Matlab...")
+output.saveMAT(path.join(output_folder, "for006"), config, aero_data)
+
+print("NPZs...")
+output.saveNPZ(path.join(output_folder, "for006"), config, aero_data)
+
+print("Done")
