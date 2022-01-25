@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from for005builder import build005
 from configreader import DatcomConfig
 from for006parser import readDatcomOutput
@@ -8,6 +9,7 @@ from os import path, mkdir
 import shutil
 import sys
 import output
+import argparse
 
 
 def splitCases(cases, size):
@@ -19,14 +21,30 @@ def splitCases(cases, size):
     return split
 
 
+parser = argparse.ArgumentParser(
+    description="Generate aerodata tensors from Datcom"
+)
+parser.add_argument(
+    "config_file",
+    metavar="cfgfile",
+    type=str,
+    nargs="?",
+    default="config.cfg",
+    help="Config input file",
+)
+
+parser.add_argument("-so", "--save-output", action="store_true")
+
+args = parser.parse_args()
+
 output_folder = "output"
 datcom_folder = "datcom"
-config_path = "config.cfg"
+config_path = args.config_file
 for005_path = path.join(datcom_folder, "for005.dat")
 rocket_def_file = "for005rocket.dat"
 for006_path = path.join(datcom_folder, "for006.dat")
 datcom_cmd = "./datcom"
-store_datcom_raw_output = False
+store_datcom_raw_output = args.save_output
 
 enable_stdout = False
 
@@ -47,11 +65,17 @@ case_list = list(
 state_vectors = list(config.states.values())
 
 print("Total number of Datcom cases: {}".format(len(case_list)))
+
+total_state_num = (
+    len(case_list) * len(config.states["alpha"]) * len(config.states["mach"])
+)
 print(
-    "Total number of possible aerodynamic states: {}".format(
-        len(case_list)
-        * len(config.states["alpha"])
-        * len(config.states["mach"])
+    "Total number of possible aerodynamic states: {}".format(total_state_num)
+)
+
+print(
+    "Expected npz file size: {:.0f} MB".format(
+        total_state_num * 8 / 1024 / 1024 * 24
     )
 )
 

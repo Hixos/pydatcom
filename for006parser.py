@@ -17,7 +17,9 @@ class DatcomCase:
     }
 
     fin_hinge_re = re.compile(r"FIN SET (?P<finnum>\d+) PANEL HINGE MOMENTS")
-    number_line_re = re.compile(r"(?P<num>-?\d+(?:.\d+)?(?:[eE][-+]?\d+)?)")
+    number_line_re = re.compile(
+        r"(?P<num>-?\d+(?:.\d+)?(?:[eE][-+]?\d+)?|\*+)"
+    )
 
     def __init__(self):
         self.alphas = []
@@ -140,9 +142,13 @@ class DatcomCase:
                     continue
 
                 parse_started = True
-                vals = [
-                    float(x) for x in self.number_line_re.findall(line) if x
-                ]
+                m = self.number_line_re.findall(line)
+                if len([x for x in m if "*" in x]) > 0:
+                    print("Found invalid value, substituting 0...")
+                    print(line)
+                    print(page)
+
+                vals = [float(x) if "*" not in x else 0 for x in m if x]
 
                 for i, v in enumerate(vals):
                     colname = cols[i]
