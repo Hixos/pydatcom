@@ -1,5 +1,5 @@
 if ~exist("datcom", "var")
-    datcom = load("../output/for006.mat");
+    datcom = load("../rockets/lynx_canard_final/for006.mat");
 end
 
 conf_base.alpha = 0;

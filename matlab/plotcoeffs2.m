@@ -39,6 +39,60 @@ conf.delta_squeeze = datcom.states.fin2delta1;
 figure
 plotAll(conf, datcom, secondaryVar);
 
+conf = conf_base_sec;
+conf.alpha = datcom.states.alpha;
+figure
+plotDamping(conf, datcom, secondaryVar);
+
+function plotDamping(conf, datcom, secondaryVar)
+tiledlayout(3,3);
+
+if nargin < 3
+nexttile
+autoPlotCoeff("CAQ", conf, datcom);
+nexttile
+autoPlotCoeff("CYP", conf, datcom);
+nexttile
+autoPlotCoeff("CYR", conf, datcom);
+
+nexttile
+autoPlotCoeff("CNQ", conf, datcom);
+nexttile
+autoPlotCoeff("CLLP", conf, datcom);
+nexttile
+autoPlotCoeff("CLLR", conf, datcom);
+
+nexttile
+autoPlotCoeff("CMQ", conf, datcom);
+nexttile
+autoPlotCoeff("CLNP", conf, datcom);
+nexttile
+autoPlotCoeff("CLNR", conf, datcom);
+else
+nexttile
+secondaryPlot("CAQ", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CYP", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CYR", conf, datcom, secondaryVar);
+
+nexttile
+secondaryPlot("CNQ", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CLLP", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CLLR", conf, datcom, secondaryVar);
+
+nexttile
+secondaryPlot("CMQ", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CLNP", conf, datcom, secondaryVar);
+nexttile
+secondaryPlot("CLNR", conf, datcom, secondaryVar);
+end
+
+end
+
 function plotAll(conf, datcom, secondaryVar)
 tiledlayout(2,3);
 

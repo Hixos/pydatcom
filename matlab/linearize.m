@@ -10,7 +10,7 @@ conf_ca0.mach = datcom.states.mach;
 CA0_mach = getcoeff("CA", conf_ca0, datcom)
 
 [CA0, CAalpha, CAbeta, CAdeltay, CAdeltap, CAdeltar, CAdeltas]  ...
-        = interpCoeff("CA", conf_base, datcom, 1)
+        = interpCoeff("CA", conf_base, datcom, 2)
 
 [CN0, CNalpha, CNbeta, CNdeltay, CNdeltap, CNdeltar, CNdeltas]  ...
         = interpCoeff("CN", conf_base, datcom)
@@ -29,12 +29,12 @@ CA0_mach = getcoeff("CA", conf_ca0, datcom)
     
 %% Linearized functions
 CAfun = @(conf) CA0 + CAalpha.*deg2rad(conf.alpha).^2 + ...
-                    CAalpha.*deg2rad(conf.beta).^2 + ...
+                    CAalpha.*deg2rad(conf.beta).^2 + ... 
                     CAdeltay.*deg2rad(conf.beta + conf.delta_yaw).^2 + ...
                     CAdeltap.*deg2rad(conf.alpha + conf.delta_pitch).^2 + ...
                     CAdeltar.*deg2rad(conf.delta_roll).^2 + ...
                     CAdeltas.*deg2rad(conf.delta_squeeze).^2 ;
-CAfun2 = @(conf) CA0 + CAalpha.*conf.alpha.^2 + ...
+CAfun2 = @(conf) CA0 + CAalpha.*deg2rad(conf.alpha).^2 + ...
                     CAalpha.*deg2rad(conf.beta).^2 + ...
                     CAdeltay.*deg2rad(conf.delta_yaw).^2 + ...
                     CAdeltap.*deg2rad(conf.delta_pitch).^2 + ...
@@ -53,10 +53,10 @@ conf = conf_base;
 % conf.mach = datcom.states.mach;
 % conf.alt = datcom.states.altitude;
 conf.alpha = datcom.states.alpha;
-% conf.alpha = 5;
-% conf.beta = 0;
+% conf.alpha = 0;
+conf.beta = 5;
 % conf.beta = datcom.states.beta;
-% conf.delta_pitch = 10;
+% conf.delta_pitch = 0;
 % conf.delta_yaw = 0;
 % conf.delta_roll = datcom.states.fin2delta1;
 % conf.delta_pitch = datcom.states.fin2delta1;
@@ -78,7 +78,7 @@ nexttile
 autoPlotCoeff("CA", conf, datcom, "Datcom", "CA");
 hold on
 plot(x, elng(x, CAfun2(conf)), "DisplayName", "Linearization");
-plot(x, elng(x, CAfun(conf)), "DisplayName", "Linearization + base angle");
+
 
 nexttile
 autoPlotCoeff("CN", conf, datcom, "Datcom", "CN");
@@ -106,29 +106,59 @@ hold on
 plot(x, elng(x, CLNfun(conf)), "DisplayName", "Linearization");
 
 
-figure
-
-alphatrim = -CLMdeltap*datcom.states.fin2delta1./CLMalpha;
-
-plot(datcom.states.fin2delta1, alphatrim);
-grid on
+%% CSV for thesis plots
+conf1 = conf_base;
+conf1.alpha = datcom.states.alpha;
+conf1.beta = 0;
 
 
+conf2 = conf_base;
+conf2.alpha = datcom.states.alpha;
+conf2.beta = 5;
 
+alpha_ext = linspace(min(conf1.alpha), max(conf1.alpha), 30);
 
-% figure
-% tiledlayout(1,2);
-% 
-% nexttile
-% conf = conf_base;
-% conf.alpha = datcom.states.alpha;
-% autoPlotCoeff("CA", conf, datcom, "Datcom", "CA");
-% 
-% nexttile
-% conf = conf_base;
-% conf.beta = datcom.states.beta;
-% autoPlotCoeff("CA", x*189, conf, datcom, "Beta [deg]", "CA", "Datcom");
-% xlim([min(datcom.states.alpha), max(datcom.states.alpha)]);
+conf1s = conf1;
+conf1s.alpha = alpha_ext;
+
+conf2s = conf2;
+conf2s.alpha = alpha_ext;
+
+%% CA
+CA_alpha1 = getcoeff("CA", conf1, datcom)';
+CA_alpha2 = getcoeff("CA", conf2, datcom)';
+
+t = table(datcom.states.alpha', CA_alpha1', CA_alpha2', 'VariableNames', {'alpha', 'ca_beta0', 'ca_beta5'});
+writetable(t, "csv/ca_alpha_datcom.csv");
+t = table(alpha_ext', CAfun2(conf1s)', CAfun2(conf2s)', 'VariableNames', {'alpha', 'ca_beta0', 'ca_beta5'});
+writetable(t, "csv/ca_alpha_simple.csv");
+
+%% CN
+CN_alpha1 = getcoeff("CN", conf1, datcom)';
+CN_alpha2 = getcoeff("CN", conf2, datcom)';
+
+t = table(datcom.states.alpha', CN_alpha1', CN_alpha2', 'VariableNames', {'alpha', 'cn_beta0', 'cn_beta5'});
+writetable(t, "csv/cn_alpha_datcom.csv");
+t = table(alpha_ext', CNfun(conf1s)', CNfun(conf2s)', 'VariableNames', {'alpha', 'cn_beta0', 'cn_beta5'});
+writetable(t, "csv/cn_alpha_simple.csv");
+
+%% CLL
+CLL_alpha1 = getcoeff("CLL", conf1, datcom)';
+CLL_alpha2 = getcoeff("CLL", conf2, datcom)';
+
+t = table(datcom.states.alpha', CLL_alpha1', CLL_alpha2', 'VariableNames', {'alpha', 'cll_beta0', 'cll_beta5'});
+writetable(t, "csv/cll_alpha_datcom.csv");
+t = table(alpha_ext', elng(alpha_ext, CLLfun(conf1s))', elng(alpha_ext, CLLfun(conf2s))', 'VariableNames', {'alpha', 'cll_beta0', 'cll_beta5'});
+writetable(t, "csv/cll_alpha_simple.csv");
+
+%% CLN
+CLN_alpha1 = getcoeff("CLN", conf1, datcom)';
+CLN_alpha2 = getcoeff("CLN", conf2, datcom)';
+
+t = table(datcom.states.alpha', CLN_alpha1', CLN_alpha2', 'VariableNames', {'alpha', 'cln_beta0', 'cln_beta5'});
+writetable(t, "csv/cln_alpha_datcom.csv");
+t = table(alpha_ext', elng(alpha_ext, CLNfun(conf1s))', elng(alpha_ext, CLNfun(conf2s))', 'VariableNames', {'alpha', 'cln_beta0', 'cln_beta5'});
+writetable(t, "csv/cln_alpha_simple.csv");
 
 function ve = elng(x, v)
     if length(v) == 1
@@ -137,7 +167,6 @@ function ve = elng(x, v)
         ve = v;
     end
 end
-
 
 function [CX0, CXalpha, CXbeta, CXdeltay, CXdeltap, CXdeltar, CXdeltas]  ...
         = interpCoeff(coeff, conf_base, datcom, order)

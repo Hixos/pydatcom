@@ -1,4 +1,4 @@
-function h = autoPlotCoeff(coeff, conf, datcom, legend_str, title_str)
+function [h, y] = autoPlotCoeff(coeff, conf, datcom, legend_str, title_str)
     [x, ilabel] = getx(conf);
     confnames = ["Alpha", "Beta", "Mach", "Altitude", "Yaw", "Pitch", ...
           "Roll", "Squeeze"];
@@ -7,10 +7,10 @@ function h = autoPlotCoeff(coeff, conf, datcom, legend_str, title_str)
                "$\theta_{pitch} \quad[deg]$", "$\theta_{roll} \quad[deg]$", ...
                "$\theta_{squeeze} \quad[deg]$"];
     if nargin > 3
-        h = plotCoeff(coeff, x, conf, datcom, legend_str);
+        [h, ~, y] = plotCoeff(coeff, x, conf, datcom, legend_str);
         legend;
     else
-        h = plotCoeff(coeff, x, conf, datcom);
+        [h, ~, y] = plotCoeff(coeff, x, conf, datcom);
     end
     
     
