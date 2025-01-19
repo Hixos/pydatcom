@@ -1,15 +1,29 @@
 #!/usr/bin/python3
-from for005builder import build005
-from configreader import DatcomConfig
-from for006parser import readDatcomOutput
-import itertools
-import subprocess
-import aerodata
-from os import path, mkdir
-import shutil
-import sys
-import output
 import argparse
+import itertools
+import multiprocessing
+from os import mkdir, path
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+import aerodata
+from configreader import DatcomConfig
+from for005builder import build005
+from for006parser import readDatcomOutput
+from multiprocessing import Pool, Value
+from dataclasses import dataclass
+import output
+
+case_counter = None
+store_datcom_raw_output = False
+
+@dataclass
+class Config:
+    total_num_cases: int
+    config: DatcomConfig
+    rocket_def: str
 
 
 def splitCases(cases, size):
@@ -35,17 +49,15 @@ parser.add_argument(
 
 parser.add_argument("-so", "--save-output", action="store_true")
 
-args = parser.parse_args()
+output_folder = Path("./output")
+datcom_folder = Path("./datcom")
+datcom_out_dir = Path("./datcom_outputs")
 
-output_folder = "output"
-datcom_folder = "datcom"
-config_path = args.config_file
-for005_path = path.join(datcom_folder, "for005.dat")
+for005_name = "for005.dat"
+for006_name = "for006.dat"
+datcom_exe = "datcom.exe"
+
 rocket_def_file = "for005rocket.dat"
-for006_path = path.join(datcom_folder, "for006.dat")
-datcom_cmd = "./datcom"
-store_datcom_raw_output = args.save_output
-
 enable_stdout = False
 
 if enable_stdout:
@@ -53,92 +65,135 @@ if enable_stdout:
 else:
     stdout = subprocess.DEVNULL
 
-config = DatcomConfig(config_path)
 
-# List of all datcom cases
-case_list = list(
-    itertools.product(
-        config.states["beta"], config.states["altitude"], *config.deflect_cases
-    )
-)
-
-state_vectors = list(config.states.values())
-
-print("Total number of Datcom cases: {}".format(len(case_list)))
-
-total_state_num = (
-    len(case_list) * len(config.states["alpha"]) * len(config.states["mach"])
-)
-print(
-    "Total number of possible aerodynamic states: {}".format(total_state_num)
-)
-
-print(
-    "Expected npz file size: {:.0f} MB".format(
-        total_state_num * 8 / 1024 / 1024 * 24
-    )
-)
+def init_pool(case_counter_arg, config_arg):
+    global case_counter
+    global config
+    case_counter = case_counter_arg
+    config = config_arg
 
 
-# Rocket definition
-with open(rocket_def_file) as rocket_file:
-    rocket_def = rocket_file.read()
+def gen_coeffs(args):
+    case_i, cases = args
 
-aero_data = aerodata.Aerodata(state_vectors, config.fin_states)
+    thread_id = multiprocessing.current_process()
+    global case_counter
+    global config
 
-# Split cases into smaller blocks (datcom cannot handle many
-# of them in a singe run)
-case_list_split = splitCases(case_list, config.max_cases_per_file)
+    with case_counter.get_lock():
+        case_counter.value += len(cases)
 
-case_counter = 0
-
-if path.isdir("datcom_outputs"):
-    shutil.rmtree("datcom_outputs")
-mkdir("datcom_outputs")
-
-if path.isdir(output_folder):
-    shutil.rmtree(output_folder)
-
-mkdir(output_folder)
-
-for i, cases in enumerate(case_list_split):
-    case_counter += len(cases)
     print(
-        "Calculating coefficients... ({}/{})".format(
-            case_counter, len(case_list)
-        )
+        f"Calculating coefficients... ({case_counter.value}/{config.total_num_cases}) (thread {thread_id.pid})"
     )
-    build005(for005_path, config, cases, rocket_def)
 
-    # Run datcom
+    dir = datcom_out_dir / Path(f"thread_{thread_id.pid}")
+
+    if dir.exists():
+        shutil.rmtree(dir)
+    dir.mkdir(parents=True)
+
+    for005_path = dir / for005_name
+    for006_path = dir / for006_name
+
+    build005(for005_path, config.config, cases, config.rocket_def)
     subprocess.run(
-        [datcom_cmd],
+        [str(datcom_folder / datcom_exe)],
         stdout=stdout,
         stderr=subprocess.STDOUT,
-        cwd=datcom_folder,
+        cwd=dir,
     )
 
     with open(for006_path) as for006_file:
         for006 = for006_file.read()
 
     case_data = readDatcomOutput(for006)
-    aero_data.addFromDatcomCases(case_data)
 
     if store_datcom_raw_output:
         shutil.move(
             for006_path,
-            path.join("datcom_outputs", "for006.dat.{:03d}".format(i + 1)),
+            path.join(
+                "datcom_outputs", "for006.{:03d}.dat".format(case_i + 1)
+            ),
         )
+    return case_i, case_data
 
-print("Saving results...")
 
-print("CSV...")
-output.saveCSV(path.join(output_folder, "for006"), config, aero_data)
+if __name__ == "__main__":
+    args = parser.parse_args()
+    config_path = args.config_file
+    store_datcom_raw_output = args.save_output
 
-print("Matlab...")
-output.saveMAT(path.join(output_folder, "for006"), config, aero_data)
+    # Read config and generate cases
+    dat_config = DatcomConfig(config_path)
+    case_list = list(
+        itertools.product(
+            dat_config.states["beta"],
+            dat_config.states["altitude"],
+            *dat_config.deflect_cases,
+        )
+    )
+    total_num_cases = len(case_list)
+    state_vectors = list(dat_config.states.values())
+    total_state_num = (
+        len(case_list)
+        * len(dat_config.states["alpha"])
+        * len(dat_config.states["mach"])
+    )
 
-print("NPZs...")
-output.saveNPZ(path.join(output_folder, "for006"), config, aero_data)
+    print("Total number of Datcom cases: {}".format(len(case_list)))
+    print(
+        "Total number of possible aerodynamic states: {}".format(
+            total_state_num
+        )
+    )
 
-print("Done")
+    print(
+        "Expected npz file size: {:.0f} MB".format(
+            total_state_num * 8 / 1024 / 1024 * 24
+        )
+    )
+
+    # Rocket definition
+    with open(rocket_def_file) as rocket_file:
+        rocket_def = rocket_file.read()
+
+    aero_data = aerodata.Aerodata(state_vectors, dat_config.fin_states)
+
+    # Split cases into smaller blocks (datcom cannot handle many
+    # of them in a singe run)
+    case_list_split = splitCases(case_list, dat_config.max_cases_per_file)
+
+    if path.isdir(output_folder):
+        shutil.rmtree(output_folder)
+
+    if datcom_out_dir.exists():
+        shutil.rmtree(datcom_out_dir)
+
+    mkdir(output_folder)
+
+    case_counter = Value("i", 0)
+
+    case_jobs = list(enumerate(case_list_split))
+
+    config = Config(total_num_cases, dat_config, rocket_def)
+
+    with Pool(
+        processes=None, initializer=init_pool, initargs=(case_counter, config)
+    ) as p:
+        data = p.map(gen_coeffs, case_jobs)
+        for i, case in data:
+            aero_data.addFromDatcomCases(case)
+
+    print("Saving results...")
+
+    print("CSV...")
+    output.saveCSV(path.join(output_folder, "for006"), dat_config, aero_data)
+
+    print("Matlab...")
+    output.saveMAT(path.join(output_folder, "for006"), dat_config, aero_data)
+
+    print("NPZs...")
+    output.saveNPZ(path.join(output_folder, "for006"), dat_config, aero_data)
+
+    print("Done")
