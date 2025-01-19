@@ -187,13 +187,16 @@ if __name__ == "__main__":
 
     print("Saving results...")
 
-    print("CSV...")
-    output.saveCSV(path.join(output_folder, "for006"), dat_config, aero_data)
+    # print("CSV...")
+    # output.saveCSV(path.join(output_folder, "for006"), dat_config, aero_data)
 
     print("Matlab...")
     output.saveMAT(path.join(output_folder, "for006"), dat_config, aero_data)
 
-    print("NPZs...")
-    output.saveNPZ(path.join(output_folder, "for006"), dat_config, aero_data)
+    # print("NPZs...")
+    # output.saveNPZ(path.join(output_folder, "for006"), dat_config, aero_data)
+
+    print("HDF5...")
+    output.saveHDF(path.join(output_folder, "for006"), dat_config, aero_data)
 
     print("Done")

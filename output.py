@@ -4,6 +4,7 @@ from configreader import DatcomConfig
 from aerodata import Aerodata
 from scipy import io
 import numpy as np
+import h5py
 
 
 def listToCSV(list_: list):
@@ -62,3 +63,16 @@ def saveMAT(file_prefix, config: DatcomConfig, aero_data: Aerodata):
 def saveNPZ(file_prefix, config: DatcomConfig, aero_data: Aerodata):
     np.savez(file_prefix + "_coeffs", **sanitizeDictKeys(aero_data.aerodata))
     np.savez(file_prefix + "_states", **sanitizeDictKeys(config.states))
+
+
+def saveHDF(file_prefix, config: DatcomConfig, aero_data: Aerodata):
+    with h5py.File(file_prefix + "_coeffs.h5", "w") as hf_coeffs:
+        for key in aero_data.aerodata.keys():
+            hf_coeffs.create_dataset(
+                key.replace("/", ""), data=aero_data.aerodata[key], dtype=None
+            )
+
+        for key in config.states.keys():
+            hf_coeffs.create_dataset(key, data=config.states[key], dtype=None)
+
+        hf_coeffs.close()
