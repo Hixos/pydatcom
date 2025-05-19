@@ -69,8 +69,8 @@ def printOptions(f, i):
     s = (
         "CASEID CASE"
         + str(i + 1)
-        + "\nDERIV RAD \nDIM M \nPRINT AERO HINGE\n"
-        + "DAMP \nSAVE \nNEXT CASE\n"
+        + "\nDERIV RAD\nDIM M\n"
+        + "DAMP\n"
     )
     f.write(s)
 
@@ -88,10 +88,11 @@ def build005(file, config, cases, rocket_config):
                     None if c[i] == () else c[i]
                 )
 
+            printOptions(f, ic)
             printFltCon(f, case_dict, config, ic == 0)
 
             if ic == 0:
                 f.write(rocket_config)
 
             printDeflct(f, case_dict)
-            printOptions(f, ic)
+            f.write("SAVE\nNEXT CASE\n")

@@ -143,10 +143,10 @@ class DatcomCase:
 
                 parse_started = True
                 m = self.number_line_re.findall(line)
-                if len([x for x in m if "*" in x]) > 0:
-                    print("Found invalid value, substituting 0...")
-                    print(line)
-                    print(page)
+                # if len([x for x in m if "*" in x]) > 0:
+                #     print("Found invalid value, substituting 0...")
+                #     print(line)
+                #     print(page)
 
                 vals = [float(x) if "*" not in x else 0 for x in m if x]
 

@@ -1,10 +1,11 @@
+import time
 import numpy as np
 from for006parser import DatcomCase
 
 
 class Aerodata:
-    def __init__(self, state_vecs, state_fin_info) -> None:
-        self.aerodata = {}
+    def __init__(self, aerodata, state_vecs, state_fin_info) -> None:
+        self.aerodata = aerodata
         self.state_vecs = state_vecs
         self.state_fin_info = state_fin_info
 
@@ -25,12 +26,12 @@ class Aerodata:
                 # For each tensor
                 for name, vals in data.items():
                     if name not in self.aerodata:
-                        self.initAerodata(name)
+                        continue
                     self.aerodata[name][state_index] = vals[i]
 
     def initAerodata(self, name: str):
         state_size = tuple([len(v) for v in self.state_vecs])
-        self.aerodata[name] = np.zeros(state_size)
+        self.aerodata[name] = np.zeros(state_size, dtype=np.float32)
 
     def getFlatSize(self):
         aerodata_size = tuple([len(x) for x in self.state_vecs])

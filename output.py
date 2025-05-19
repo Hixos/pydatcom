@@ -65,14 +65,14 @@ def saveNPZ(file_prefix, config: DatcomConfig, aero_data: Aerodata):
     np.savez(file_prefix + "_states", **sanitizeDictKeys(config.states))
 
 
-def saveHDF(file_prefix, config: DatcomConfig, aero_data: Aerodata):
+def saveHDF(file_prefix, config: DatcomConfig, aero_data: dict[str, np.ndarray]):
     with h5py.File(file_prefix + "_coeffs.h5", "w") as hf_coeffs:
-        for key in aero_data.aerodata.keys():
+        for key in aero_data.keys():
             hf_coeffs.create_dataset(
-                key.replace("/", ""), data=aero_data.aerodata[key], dtype=None
+                key.replace("/", ""), data=aero_data[key], dtype=np.float32
             )
 
         for key in config.states.keys():
-            hf_coeffs.create_dataset(key, data=config.states[key], dtype=None)
+            hf_coeffs.create_dataset(key, data=config.states[key], dtype=np.float32)
 
         hf_coeffs.close()
